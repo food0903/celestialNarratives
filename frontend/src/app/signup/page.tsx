@@ -45,7 +45,7 @@ export default function SignInSide() {
           sm={4}
           md={7}
           sx={{
-            backgroundImage: 'url(https://www.varia.org/wp-content/uploads/2023/09/disneyBlog.png)',
+            backgroundImage: 'url(https://cdn.svc.asmodee.net/production-libellud/uploads/2022/03/WALLPAPER_DESKTOP_STELLA_COMPO1-1-scaled-1-scaled.jpg)',
             backgroundRepeat: 'no-repeat',
             backgroundSize: 'cover',
             backgroundPosition: 'center',
@@ -88,6 +88,16 @@ export default function SignInSide() {
                 id="password"
                 autoComplete="current-password"
               />
+              <TextField
+                margin="normal"
+                required
+                fullWidth
+                name="password"
+                label="Confirm Password"
+                type="password"
+                id="password"
+                autoComplete="current-password"
+              />
               <FormControlLabel
                 control={<Checkbox value="remember" color="primary" />}
                 label="Remember me"
@@ -101,14 +111,9 @@ export default function SignInSide() {
                 Sign In
               </Button>
               <Grid container>
-                <Grid item xs>
-                  <Link href="#" variant="body2">
-                    Forgot password?
-                  </Link>
-                </Grid>
                 <Grid item>
-                  <Link href="#" variant="body2">
-                    {"Don't have an account? Sign Up"}
+                  <Link href="/signin" variant="body2">
+                    {"Already have an account? Sign in"}
                   </Link>
                 </Grid>
               </Grid>

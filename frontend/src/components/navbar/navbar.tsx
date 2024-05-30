@@ -7,6 +7,8 @@ import Container from '@mui/material/Container';
 import AdbIcon from '@mui/icons-material/Adb';
 import ClientNavbar from './clientNavbar';
 import UserMenu from './userMenu';
+import Link from 'next/link';
+
 const pages = ['Products', 'Pricing', 'Blog'];
 const settings = ['Profile', 'Account', 'Dashboard', 'Logout'];
 
@@ -16,16 +18,12 @@ const ResponsiveAppBar = () => {
     <AppBar position="static" className="bg-blue-500">
       <Container maxWidth="xl">
         <Toolbar disableGutters>
+          <Link href = '/' legacyBehavior passHref>
+            <a>
         <img src="/logo.jpg" alt="Celestial Narrative Logo" style={{ width: 50, height: 50 }} />
-          <Typography
-            variant="h6"
-            noWrap
-            component="a"
-            href="#"
-            className="mr-2 hidden md:flex font-mono font-bold tracking-widest text-white no-underline"
-          >
-            C-Narrative
-          </Typography>
+          
+          </a>
+          </Link>
 
           <div className="flex-grow-1 flex md:flex">
             <ClientNavbar pages={pages} />
