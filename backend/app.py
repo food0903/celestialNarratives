@@ -2,6 +2,7 @@ from flask import Flask, jsonify, request, redirect, url_for, render_template
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+from flask_cors import CORS
 from dotenv import load_dotenv
 import os
 
@@ -27,6 +28,13 @@ app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URI
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = SECRET_KEY
 
+# Configure session cookie settings
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # or 'Strict' depending on your requirements
+
+# Allow CORS for all domains on all routes
+CORS(app, supports_credentials=True)
+
 db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
 login_manager = LoginManager(app)
@@ -46,7 +54,7 @@ class User(db.Model):
     def check_password(self, pw):
         return bcrypt.check_password_hash(self.password, pw)
     
-     # Required methods and properties for Flask-Login
+    # Required methods and properties for Flask-Login
     @property
     def is_authenticated(self):
         return True  # Assuming all users are authenticated
@@ -99,7 +107,16 @@ def register():
         db.session.commit()
         
         login_user(new_user)
-        
+
+        response = jsonify({
+            "message": "User registered and logged in successfully",
+            "user":{
+                "id": new_user.id,
+                "username": new_user.username,
+                "name": new_user.name
+            }
+        })
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
         return jsonify({"message": "User registered and logged in successfully"}), 201
     else:
         return jsonify({"error": "Request body must be JSON"}), 400
@@ -114,7 +131,16 @@ def login():
         user = User.query.filter_by(username=username).first()
         if user and user.check_password(password):
             login_user(user)
-            return jsonify({"message": "Login successful"}), 200
+            response = jsonify({
+                "message": "Login successful",
+                "user":{
+                    "id": user.id,
+                    "username": user.username,
+                    "name": user.name
+                }
+            })
+            response.headers.add('Access-Control-Allow-Credentials', 'true')
+            return response, 200
         return jsonify({"message": "Invalid credentials"}), 401
     else:
         return jsonify({"message": "Request body must be JSON"}), 400
@@ -123,7 +149,9 @@ def login():
 @login_required
 def logout():
     logout_user()
-    return jsonify({"message": "Logout successful"}), 200
+    response = jsonify({"message": "Logout successful"})
+    response.headers.add('Access-Control-Allow-Credentials', 'true')
+    return response, 200
 
 if __name__ == '__main__':
     app.run(debug=True)

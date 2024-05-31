@@ -9,8 +9,8 @@ import ClientNavbar from './clientNavbar';
 import UserMenu from './userMenu';
 import Link from 'next/link';
 
-const pages = ['Products', 'Pricing', 'Blog'];
-const settings = ['Profile', 'Account', 'Dashboard', 'Logout'];
+const pages = ['About', 'Rules'];
+const settings = ['Profile', 'Logout'];
 
 
 const ResponsiveAppBar = () => {

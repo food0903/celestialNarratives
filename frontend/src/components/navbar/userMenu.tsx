@@ -7,6 +7,7 @@ import Tooltip from '@mui/material/Tooltip';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import Typography from '@mui/material/Typography';
+import { logout } from '@/actions';
 
 interface UserMenuProps {
   settings: string[];
@@ -23,11 +24,16 @@ const UserMenu: FC<UserMenuProps> = ({ settings }) => {
     setAnchorElUser(null);
   };
 
+  const handleLogout = async () => {
+    await logout();
+    handleCloseUserMenu();
+  };
+
   return (
     <>
       <Tooltip title="Open settings">
         <IconButton onClick={handleOpenUserMenu} className="p-0">
-          <Avatar alt="Remy Sharp" src="/static/images/avatar/2.jpg" />
+        <Avatar alt="Remy Sharp" src="https://www.iconpacks.net/icons/2/free-user-icon-3296-thumb.png" /> {/* please put user icon here*/}
         </IconButton>
       </Tooltip>
       <Menu
@@ -47,12 +53,21 @@ const UserMenu: FC<UserMenuProps> = ({ settings }) => {
         className="mt-10 "
       >
         {settings.map((setting) => (
-          <MenuItem key={setting} onClick={handleCloseUserMenu}>
-            <Link href={`/${setting.toLowerCase()}`} passHref>
+          <MenuItem
+            key={setting}
+            onClick={setting === 'Logout' ? handleLogout : handleCloseUserMenu}
+          >
+            {setting === 'Logout' ? (
               <Typography textAlign="center" className="text-black">
                 {setting}
               </Typography>
-            </Link>
+            ) : (
+              <Link href={`/${setting.toLowerCase()}`} passHref>
+                <Typography textAlign="center" className="text-black">
+                  {setting}
+                </Typography>
+              </Link>
+            )}
           </MenuItem>
         ))}
       </Menu>
