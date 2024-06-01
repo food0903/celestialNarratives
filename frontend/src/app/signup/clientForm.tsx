@@ -28,13 +28,10 @@ export default function ClientSignUpForm() {
       return;
     }
 
-    console.log("password", data.get('password'));
-    console.log("confirm password", data.get('confirmPassword'));
 
     try {
       const user = await register(data);
       router.push('/');
-      console.log("registered user", user);
     } catch (error: any) {
       setError(error.message || 'Registration failed');
     }

@@ -19,7 +19,6 @@ export default function ClientForm() {
     try {
       const user = await login(data);
       router.push('/');
-      console.log("logged user", user);
     } catch (error) {
       setError('Invalid username or password');
     }

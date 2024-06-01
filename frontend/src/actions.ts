@@ -55,7 +55,6 @@ export const login = async(formData:FormData)=>{
     const formUsername = formData.get('username') as string
     const formPassword = formData.get('password') as string
 
-    console.log("form data: ", formUsername, formPassword)
 
     //check user in the db
     const response = await fetch('http://127.0.0.1:5000/login', {
@@ -70,7 +69,6 @@ export const login = async(formData:FormData)=>{
         credentials : 'include'
     });
 
-    console.log("response", response)
 
     if (response.ok) {
         const user = await response.json();

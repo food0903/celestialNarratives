@@ -9,7 +9,7 @@ import ClientNavbar from './clientNavbar';
 import UserMenu from './userMenu';
 import Link from 'next/link';
 
-const pages = ['About', 'Rules'];
+const pages = ['About', 'Rules', 'Cards Collection'];
 const settings = ['Profile', 'Logout'];
 
 
@@ -28,8 +28,6 @@ const ResponsiveAppBar = () => {
           <div className="flex-grow-1 flex md:flex">
             <ClientNavbar pages={pages} />
           </div>
-
-          <AdbIcon className="flex md:hidden mr-2" />
           <Typography
             variant="h5"
             noWrap

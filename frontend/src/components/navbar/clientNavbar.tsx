@@ -56,7 +56,7 @@ const ClientNavbar: FC<ClientNavbarProps> = ({ pages }) => {
       >
         {pages.map((page) => (
           <MenuItem key={page} onClick={handleCloseNavMenu}>
-            <Link href={`/${page.toLowerCase()}`} passHref>
+            <Link href={`/${page.toLowerCase().replace(/ /g, '-')}`} passHref>
               <Typography textAlign="center" className="text-black">
                 {page}
               </Typography>
@@ -68,7 +68,7 @@ const ClientNavbar: FC<ClientNavbarProps> = ({ pages }) => {
       {/* Desktop Menu */}
       <div className="hidden md:flex space-x-4">
         {pages.map((page) => (
-          <Link href={`/${page.toLowerCase()}`} key={page} passHref>
+          <Link href={`/${page.toLowerCase().trim().replace(/ /g, '-')}`} key={page} passHref>
             <Typography className="text-white px-4 cursor-pointer">
               {page}
             </Typography>
