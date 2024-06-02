@@ -69,6 +69,8 @@ export const login = async(formData:FormData)=>{
         credentials : 'include'
     });
 
+    
+
 
     if (response.ok) {
         const user = await response.json();
@@ -82,6 +84,7 @@ export const login = async(formData:FormData)=>{
       } else {
         throw new Error('Invalid credentials');
       }
+
  
 
 }
