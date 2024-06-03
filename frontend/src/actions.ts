@@ -69,16 +69,17 @@ export const login = async(formData:FormData)=>{
         credentials : 'include'
     });
 
-    
-
 
     if (response.ok) {
-        const user = await response.json();
+        const data = await response.json();
+        const user = data.user;
+        console.log('user after login:', user);
         session.isLogin = true;
         session.username = user.username;
         session.name = user.name;
         session.id = user.id;
         await session.save();
+        console.log('session after login:', session);
         return user;
         
       } else {
