@@ -5,6 +5,7 @@ from flask_login import LoginManager, UserMixin, login_user, login_required, log
 from flask_cors import CORS
 from dotenv import load_dotenv
 import os
+from flask_socketio import SocketIO, send, emit
 
 # Load environment variables from .env file
 load_dotenv()
@@ -39,6 +40,8 @@ db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
+socketio = SocketIO(app, cors_allowed_origins="*")
+
 
 # Define the User model
 class User(db.Model):
@@ -47,6 +50,7 @@ class User(db.Model):
     username = db.Column(db.String(50), unique=True, nullable=True)
     password = db.Column(db.String(60), nullable=False)
     name = db.Column(db.String(50))
+    room_id = db.Column(db.Integer, db.ForeignKey('rooms.room_id'), nullable=True)
 
     def set_password(self, pw):
         self.password = bcrypt.generate_password_hash(pw).decode('utf8')
@@ -69,6 +73,21 @@ class User(db.Model):
 
     def get_id(self):
         return str(self.id)
+    
+
+class Room(db.Model):
+    __tablename__ = 'rooms'
+    room_id = db.Column(db.Integer, primary_key=True)
+    room_name = db.Column(db.String(255), nullable=False)
+    host_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    num_players = db.Column(db.Integer, nullable=False, default=0)
+    max_players = db.Column(db.Integer, nullable=False)
+    status = db.Column(db.String(50), nullable=False, default='waiting')
+    created_at = db.Column(db.DateTime, nullable=False, default=db.func.current_timestamp())
+
+    host = db.relationship('User', backref='hosted_rooms', foreign_keys=[host_id])
+    users = db.relationship('User', backref='room', foreign_keys=[User.room_id])
+
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -152,6 +171,55 @@ def logout():
     response = jsonify({"message": "Logout successful"})
     response.headers.add('Access-Control-Allow-Credentials', 'true')
     return response, 200
+
+
+@app.route('/create_room', methods=['POST'])
+def create_room():
+    data = request.get_json()
+    room_name = data.get('room_name')
+    host_id = data.get('host_id')
+    max_players = data.get('max_players')
+
+    if not room_name or not max_players:
+        return jsonify({'message': 'Room name and max players are required'}), 400
+    
+    new_room = Room(room_name=room_name, host_id=host_id, max_players=max_players, num_players=1)
+    db.session.add(new_room)
+    db.session.commit()
+
+    return jsonify({'message': 'Room created successfully'}), 201
+
+@socketio.on('get_rooms')
+def get_rooms():
+    rooms = Room.query.all()
+    rooms_list =[]
+    for room in rooms:
+        room_data = {
+            'room_id': room.room_id,
+            'room_name': room.room_name,
+            'host_id': room.host_id,
+            'num_players': room.num_players,
+            'max_players': room.max_players,
+            'status': room.status,
+            'created_at': room.created_at
+        }
+        rooms_list.append(room_data)
+    emit('rooms_data', rooms_list)
+
+# SocketIO
+@socketio.on('connect')
+def handle_connect():
+    print('Client connected')
+    emit('message', 'Connected to the server')
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    print('Client disconnected')
+
+@socketio.on('message')
+def handle_message(msg):
+    print('Message:', msg)
+    send(msg, broadcast=True)
 
 if __name__ == '__main__':
     app.run(debug=True)
