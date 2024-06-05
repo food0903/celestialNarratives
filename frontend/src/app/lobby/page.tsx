@@ -3,6 +3,11 @@ import React, { useEffect, useState } from 'react';
 import { getSession } from '@/actions';
 import { useRouter } from 'next/navigation';
 import io, { Socket } from 'socket.io-client';
+import { Room } from '@mui/icons-material';
+import RoomList from '@/components/roomList';
+import Box from '@mui/material/Box';
+import TextField from '@mui/material/TextField'; 
+import Button from '@mui/material/Button';
 
 interface Room {
   'room_id': number;
@@ -110,13 +115,37 @@ const Page = () => {
 
   return (
     <div>
-      <h1>Rooms</h1>
-      <form onSubmit={handleSubmit}>
+      <Box className="my-4" component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'row', gap: 2 }}>
+      <TextField
+        label="Room name"
+        value={roomName}
+        onChange={(e) => setRoomName(e.target.value)}
+        className="bg-white"
+        variant="outlined"
+        required
+   
+      />
+      <TextField
+        label="Max players"
+        value={maxPlayers}
+        onChange={(e) => setMaxPlayers(e.target.value !== '' ? Number(e.target.value) : 3)}
+        type="number"
+        inputProps={{ min: 3, max: 12 }}
+        className="bg-white"
+        variant="outlined"
+        required
+      />
+      <Button type="submit" variant="contained" color="primary">
+        Create room
+      </Button>
+    </Box>
+      {/* <form onSubmit={handleSubmit} className='my-4'>
         <input
           type="text"
           placeholder="Room name"
           value={roomName}
           onChange={(e) => setRoomName(e.target.value)}
+          className='text-black'
           required
         />
         <input
@@ -126,19 +155,15 @@ const Page = () => {
           onChange={(e) => setMaxPlayers(e.target.value !== '' ? Number(e.target.value) : 3)}
           min="3"
           max="12"
+          className='text-black'
           required
         />
         <button type="submit">Create room</button>
-      </form>
+      </form> */}
       {error && <p>{error}</p>}
-      <ul>
-        {rooms.map((room) => (
-          <li key={room.room_id}>
-            {room.room_name} - {room.status} - {new Date(room.created_at).toLocaleString()}
-          </li>
-        ))}
-      </ul>
+      <RoomList rooms={rooms} />
     </div>
+   
   );
 };
 

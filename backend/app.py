@@ -6,6 +6,7 @@ from flask_cors import CORS
 from dotenv import load_dotenv
 import os
 from flask_socketio import SocketIO, send, emit
+from datetime import datetime
 
 # Load environment variables from .env file
 load_dotenv()
@@ -201,7 +202,7 @@ def get_rooms():
             'num_players': room.num_players,
             'max_players': room.max_players,
             'status': room.status,
-            'created_at': room.created_at
+            'created_at': room.created_at.strftime('%Y-%m-%d %H:%M:%S')
         }
         rooms_list.append(room_data)
     emit('rooms_data', rooms_list)
@@ -222,4 +223,5 @@ def handle_message(msg):
     send(msg, broadcast=True)
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    socketio.run(app, debug=True)
+
