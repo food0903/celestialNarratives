@@ -35,7 +35,10 @@ export const register = async(formData:FormData)=>{
     });
 
     if (response.ok) {
-        const user = await response.json();
+        const data = await response.json();
+        const user = data.user;
+
+        console.log('user after register:', user);
         session.isLogin = true;
         session.username = user.username;
         session.name = user.name;

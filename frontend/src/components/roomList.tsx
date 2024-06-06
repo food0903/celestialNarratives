@@ -8,6 +8,8 @@ import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import Paper from '@mui/material/Paper';
 import { TableVirtuoso, TableComponents } from 'react-virtuoso';
+import { getSession } from '@/actions';
+import { Socket } from 'socket.io-client';
 
 interface Room {
   room_id: number;
@@ -60,7 +62,7 @@ const rows: Room[] = Array.from({ length: 200 }, (_, index) => ({
     room_name: `Room ${index + 1}`,
     status: 'Available',
     num_players: Math.floor(Math.random() * 10),
-    max_players: 10,
+    max_players: 12,
     created_at: new Date().toISOString(),
 }));
 
@@ -96,7 +98,7 @@ function fixedHeaderContent() {
   );
 }
 
-function rowContent(_index: number, row: Room) {
+function rowContent(_index: number, row: Room, socket: Socket | null) {
   return (
     <React.Fragment>
       {columns.map((column) => (
@@ -109,7 +111,7 @@ function rowContent(_index: number, row: Room) {
             : column.dataKey === 'num_players'
             ? `${row.num_players}/${row.max_players}`
             : column.dataKey === 'actions'
-            ? <button onClick={() => alert(`Joining room ${row.room_id}`)} className='rounded-md bg-slate-200 p-4'>Join</button>
+            ? <button onClick={() => joinRoom(row.room_id, socket) } className='rounded-md bg-slate-200 p-4'>Join</button>
             : row[column.dataKey]}
         </TableCell>
       ))}
@@ -119,16 +121,43 @@ function rowContent(_index: number, row: Room) {
 
 interface RoomListProps {
   rooms: Room[];
+  socket: Socket | null;
 }
 
-const RoomList: React.FC<RoomListProps> = ({ rooms }) => {
+const joinRoom = async (room_id: number, socket: Socket | null) => {
+  const session = await getSession();
+  const response = await fetch('http://127.0.0.1:5000/join_room', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      'room_id': room_id,
+      'user_id': session.id
+    }),
+    credentials: 'include',
+  })
+  const data = await response.json();
+
+
+  if(response.ok){
+    console.log('Joined room', data.room_id);
+    if(socket){
+      socket.emit('get_rooms');
+    }
+  } else {
+    console.error('error:', data.error);
+  }
+}
+
+const RoomList: React.FC<RoomListProps> = ({ rooms, socket }) => {
   return (
     <Paper style={{ height: 500, width: '100%' }}>
       <TableVirtuoso
         data={rooms}
         components={VirtuosoTableComponents}
         fixedHeaderContent={fixedHeaderContent}
-        itemContent={rowContent}
+        itemContent={(index, room) => rowContent(index, room, socket)}
       />
     </Paper>
   );

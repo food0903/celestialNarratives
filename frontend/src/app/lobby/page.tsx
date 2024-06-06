@@ -77,6 +77,7 @@ const Page = () => {
         'host_id': session.id,
         'max_players': maxPlayers,
       }),
+      credentials: 'include',
     });
 
     if (response.ok) {
@@ -161,7 +162,7 @@ const Page = () => {
         <button type="submit">Create room</button>
       </form> */}
       {error && <p>{error}</p>}
-      <RoomList rooms={rooms} />
+      <RoomList rooms={rooms} socket= {socket} />
     </div>
    
   );

@@ -122,22 +122,23 @@ def register():
             return jsonify({"error": "Username already exists"}), 409  
 
         hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
-        new_user = User(username=username, password=hashed_password, name=name)
+        new_user = User(username=username, password=hashed_password, name=name, room_id=None)
         db.session.add(new_user)
         db.session.commit()
-        
-        login_user(new_user)
 
+        login_user(new_user)
+        print(new_user.id, new_user.username, new_user.name)
+        
         response = jsonify({
             "message": "User registered and logged in successfully",
-            "user":{
+            "user": {  # This is the correct placement of the user object
                 "id": new_user.id,
                 "username": new_user.username,
                 "name": new_user.name
             }
         })
         response.headers.add('Access-Control-Allow-Credentials', 'true')
-        return jsonify({"message": "User registered and logged in successfully"}), 201
+        return response, 201
     else:
         return jsonify({"error": "Request body must be JSON"}), 400
 
@@ -187,8 +188,50 @@ def create_room():
     new_room = Room(room_name=room_name, host_id=host_id, max_players=max_players, num_players=1)
     db.session.add(new_room)
     db.session.commit()
+    user = User.query.get(host_id)
+    user.room_id = new_room.room_id
+    db.session.commit()
 
     return jsonify({'message': 'Room created successfully'}), 201
+
+@app.route('/join_room', methods=['POST'])
+def join_room():
+    data = request.get_json()
+    user_id = data.get('user_id')
+    room_id = data.get('room_id')
+
+    try:
+        user = User.query.get(user_id)
+        if user.room_id:
+            return jsonify({'message': 'User already in a room',
+                            'error': 'user already in room'}), 400
+        user.room_id = room_id
+        room = Room.query.get(room_id)
+        if room.max_players == room.num_players:
+            return jsonify({'message': 'Room is full',
+                            'error': 'room is full'}), 400
+        room.num_players += 1
+        db.session.commit()
+        return jsonify({'message': 'Joined room successfully', 'room_id': room_id}), 200
+    except Exception as error:  # Corrected syntax from `catch` to `except`
+        return jsonify({'message': 'Error joining room', 'error': str(error)}), 400
+    
+@app.route('/leave_room', methods=['POST'])
+def leave_room():
+    data = request.get_json()
+    user_id = data.get('user_id')
+    room_id = data.get('room_id')
+
+    try:
+        user = User.query.get(user_id)
+        user.room_id = None
+        room = Room.query.get(room_id)
+        room.num_players -= 1
+        db.session.commit()
+        return jsonify({'message': 'Left room successfully', 'room_id': room_id}), 200
+    except Exception as error:
+        return jsonify({'message': 'Error leaving room', 'error': str(error)}), 400
+ 
 
 @socketio.on('get_rooms')
 def get_rooms():
@@ -206,6 +249,22 @@ def get_rooms():
         }
         rooms_list.append(room_data)
     emit('rooms_data', rooms_list)
+
+@socketio.on('fetch_room_users')
+def fetch_room_users():
+    room_id = request.args.get('room_id')
+    users = User.query.filter_by(room_id=room_id).all()
+    users_list = []
+    for user in users:
+        user_data = {
+            'id': user.id,
+            'username': user.username,
+            'name': user.name
+        }
+        users_list.append(user_data)
+    emit('room_users', users_list)
+
+
 
 # SocketIO
 @socketio.on('connect')
