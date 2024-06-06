@@ -192,7 +192,16 @@ def create_room():
     user.room_id = new_room.room_id
     db.session.commit()
 
-    return jsonify({'message': 'Room created successfully'}), 201
+    return jsonify({'message': 'Room created successfully',
+                    'room_res': {
+                        'room_id': new_room.room_id,
+                        'room_name': new_room.room_name,
+                        'host_id': new_room.host_id,
+                        'num_players': new_room.num_players,
+                        'max_players': new_room.max_players,
+                        'status': new_room.status,
+                        'created_at': new_room.created_at.strftime('%Y-%m-%d %H:%M:%S')
+                    }}), 201
 
 @app.route('/join_room', methods=['POST'])
 def join_room():
@@ -264,6 +273,25 @@ def fetch_room_users():
         users_list.append(user_data)
     emit('room_users', users_list)
 
+@socketio.on('fetch_room')
+def fetch_room():
+    room_id = request.args.get('room_id')
+    room = Room.query.get(room_id)
+    if not room:
+        emit('room_data', {'error': 'Room not found'})
+        return
+    players = User.query.filter_by(room_id=room_id).all()
+    room_data = {
+        'room_id': room.room_id,
+        'room_name': room.room_name,
+        'host_id': room.host_id,
+        'num_players': room.num_players,
+        'max_players': room.max_players,
+        'status': room.status,
+        'created_at': room.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+        'players': [{'id': player.id, 'name': player.name} for player in players]
+    }
+    emit('room_data', room_data)
 
 
 # SocketIO

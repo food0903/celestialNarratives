@@ -10,6 +10,9 @@ import Paper from '@mui/material/Paper';
 import { TableVirtuoso, TableComponents } from 'react-virtuoso';
 import { getSession } from '@/actions';
 import { Socket } from 'socket.io-client';
+import { redirect } from 'next/navigation';
+import {  useRouter  } from 'next/navigation';
+import { AppRouterInstance } from 'next/dist/shared/lib/app-router-context.shared-runtime';
 
 interface Room {
   room_id: number;
@@ -98,7 +101,7 @@ function fixedHeaderContent() {
   );
 }
 
-function rowContent(_index: number, row: Room, socket: Socket | null) {
+function rowContent(_index: number, row: Room, socket: Socket | null, router: AppRouterInstance) {
   return (
     <React.Fragment>
       {columns.map((column) => (
@@ -111,7 +114,7 @@ function rowContent(_index: number, row: Room, socket: Socket | null) {
             : column.dataKey === 'num_players'
             ? `${row.num_players}/${row.max_players}`
             : column.dataKey === 'actions'
-            ? <button onClick={() => joinRoom(row.room_id, socket) } className='rounded-md bg-slate-200 p-4'>Join</button>
+            ? <button onClick={() => joinRoom(row.room_id, socket, router) } className='rounded-md bg-slate-200 p-4'>Join</button>
             : row[column.dataKey]}
         </TableCell>
       ))}
@@ -124,7 +127,7 @@ interface RoomListProps {
   socket: Socket | null;
 }
 
-const joinRoom = async (room_id: number, socket: Socket | null) => {
+const joinRoom = async (room_id: number, socket: Socket | null, router: AppRouterInstance) => {
   const session = await getSession();
   const response = await fetch('http://127.0.0.1:5000/join_room', {
     method: 'POST',
@@ -137,27 +140,29 @@ const joinRoom = async (room_id: number, socket: Socket | null) => {
     }),
     credentials: 'include',
   })
-  const data = await response.json();
 
+  const data = await response.json();
 
   if(response.ok){
     console.log('Joined room', data.room_id);
     if(socket){
       socket.emit('get_rooms');
     }
+    router.push(`/lobby/${data.room_id}`);
   } else {
     console.error('error:', data.error);
   }
 }
 
 const RoomList: React.FC<RoomListProps> = ({ rooms, socket }) => {
+  const router = useRouter();
   return (
     <Paper style={{ height: 500, width: '100%' }}>
       <TableVirtuoso
         data={rooms}
         components={VirtuosoTableComponents}
         fixedHeaderContent={fixedHeaderContent}
-        itemContent={(index, room) => rowContent(index, room, socket)}
+        itemContent={(index, room) => rowContent(index, room, socket, router)}
       />
     </Paper>
   );

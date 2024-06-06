@@ -82,6 +82,8 @@ const Page = () => {
 
     if (response.ok) {
       const data = await response.json();
+      const room_id = data.room_res.room_id;
+      router.push(`/lobby/${room_id}`);
       console.log('Created room', data);
     }
     if (socket) {
@@ -140,27 +142,6 @@ const Page = () => {
         Create room
       </Button>
     </Box>
-      {/* <form onSubmit={handleSubmit} className='my-4'>
-        <input
-          type="text"
-          placeholder="Room name"
-          value={roomName}
-          onChange={(e) => setRoomName(e.target.value)}
-          className='text-black'
-          required
-        />
-        <input
-          type="number"
-          placeholder="Max players"
-          value={maxPlayers}
-          onChange={(e) => setMaxPlayers(e.target.value !== '' ? Number(e.target.value) : 3)}
-          min="3"
-          max="12"
-          className='text-black'
-          required
-        />
-        <button type="submit">Create room</button>
-      </form> */}
       {error && <p>{error}</p>}
       <RoomList rooms={rooms} socket= {socket} />
     </div>
