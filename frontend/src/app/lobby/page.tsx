@@ -8,6 +8,7 @@ import RoomList from '@/components/roomList';
 import Box from '@mui/material/Box';
 import TextField from '@mui/material/TextField'; 
 import Button from '@mui/material/Button';
+import { useRooms } from '@/hooks/useRooms';
 
 interface Room {
   'room_id': number;
@@ -17,21 +18,19 @@ interface Room {
   'max_players': number;
   'status': string;
   'created_at': string;
-}
+} 
 
 const Page = () => {
-  const [rooms, setRooms] = useState<Room[]>([]);
-  const [socket, setSocket] = useState<Socket | null>(null);
   const [roomName, setRoomName] = useState<string>('');
   const [maxPlayers, setMaxPlayers] = useState<number>(3);
   const [error, setError] = useState<string | null>(null);
   const [session, setSession] = useState<any | null>(null);
   const router = useRouter();
+  const rooms = useRooms();
 
   useEffect(() => {
     const fetchSession = async () => {
       const sessionData = await getSession();
-      console.log('session', sessionData);
       if (!sessionData.isLogin) {
         router.push('/signin');
       } else {
@@ -42,24 +41,6 @@ const Page = () => {
     fetchSession();
   }, [router]);
 
-  useEffect(() => {
-    const newSocket = io('http://127.0.0.1:5000');
-    setSocket(newSocket);
-
-    newSocket.on('connect', () => {
-      console.log('connected');
-      newSocket.emit('get_rooms');
-    });
-
-    newSocket.on('rooms_data', (rooms: Room[]) => {
-      setRooms(rooms);
-      console.log('rooms', rooms);
-    });
-
-    return () => {
-      newSocket.close();
-    };
-  }, []);
 
   const createRoom = async (roomName: string, maxPlayers: number) => {
     if (!session) {
@@ -83,11 +64,11 @@ const Page = () => {
     if (response.ok) {
       const data = await response.json();
       const room_id = data.room_res.room_id;
-      router.push(`/lobby/${room_id}`);
+      // router.push(`/lobby/${room_id}`);
       console.log('Created room', data);
     }
-    if (socket) {
-      socket.emit('get_rooms');
+    if (rooms) {
+      // console.log('rooms:', rooms);
     } else {
       console.error('Socket not connected');
     }
@@ -143,7 +124,7 @@ const Page = () => {
       </Button>
     </Box>
       {error && <p>{error}</p>}
-      <RoomList rooms={rooms} socket= {socket} />
+      <RoomList/>
     </div>
    
   );
