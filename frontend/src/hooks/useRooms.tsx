@@ -41,6 +41,7 @@ export const useRooms = () => {
       }
 
       return () => {
+        console.log('Cleaning up socket listeners');
         socket.off('connect');
         socket.off('rooms_data', handleRoomsData);
       };

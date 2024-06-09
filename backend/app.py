@@ -94,6 +94,8 @@ class Room(db.Model):
 def load_user(user_id):
     return User.query.get(int(user_id))
 
+
+
 @app.route('/')
 @login_required
 def index():
@@ -174,6 +176,21 @@ def logout():
     response.headers.add('Access-Control-Allow-Credentials', 'true')
     return response, 200
 
+def emit_rooms_data():
+    rooms = Room.query.all()
+    rooms_list =[]
+    for room in rooms:
+        room_data = {
+            'room_id': room.room_id,
+            'room_name': room.room_name,
+            'host_id': room.host_id,
+            'num_players': room.num_players,
+            'max_players': room.max_players,
+            'status': room.status,
+            'created_at': room.created_at.strftime('%Y-%m-%d %H:%M:%S')
+        }
+        rooms_list.append(room_data)
+    socketio.emit('rooms_data', rooms_list, namespace='/')
 
 @app.route('/create_room', methods=['POST'])
 def create_room():
@@ -191,6 +208,8 @@ def create_room():
     user = User.query.get(host_id)
     user.room_id = new_room.room_id
     db.session.commit()
+
+    emit_rooms_data()
 
     return jsonify({'message': 'Room created successfully',
                     'room_res': {
@@ -221,6 +240,7 @@ def join_room():
                             'error': 'room is full'}), 400
         room.num_players += 1
         db.session.commit()
+        emit_rooms_data()
         return jsonify({'message': 'Joined room successfully', 'room_id': room_id}), 200
     except Exception as error:  # Corrected syntax from `catch` to `except`
         return jsonify({'message': 'Error joining room', 'error': str(error)}), 400
@@ -257,7 +277,7 @@ def get_rooms():
             'created_at': room.created_at.strftime('%Y-%m-%d %H:%M:%S')
         }
         rooms_list.append(room_data)
-    emit('rooms_data', rooms_list)
+    emit('rooms_data', rooms_list, broadcast=True)
 
 @socketio.on('fetch_room_users')
 def fetch_room_users():
@@ -271,7 +291,7 @@ def fetch_room_users():
             'name': user.name
         }
         users_list.append(user_data)
-    emit('room_users', users_list)
+    emit('room_users', users_list, broadcast=True)
 
 @socketio.on('fetch_room')
 def fetch_room():
@@ -291,7 +311,7 @@ def fetch_room():
         'created_at': room.created_at.strftime('%Y-%m-%d %H:%M:%S'),
         'players': [{'id': player.id, 'name': player.name} for player in players]
     }
-    emit('room_data', room_data)
+    emit('room_data', room_data, broadcast=True)
 
 
 # SocketIO

@@ -64,7 +64,7 @@ const Page = () => {
     if (response.ok) {
       const data = await response.json();
       const room_id = data.room_res.room_id;
-      // router.push(`/lobby/${room_id}`);
+      router.push(`/lobby/${room_id}`);
       console.log('Created room', data);
     }
     if (rooms) {

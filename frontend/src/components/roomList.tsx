@@ -130,7 +130,7 @@ const joinRoom = async (room_id: number, router: AppRouterInstance) => {
 
   if(response.ok){
     console.log('Joined room', data.room_id);
-    // router.push(`/lobby/${data.room_id}`);
+    router.push(`/lobby/${data.room_id}`);
   } else {
     console.error('error:', data.error);
   }
