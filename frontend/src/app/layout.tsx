@@ -5,6 +5,7 @@ import type { AppProps } from 'next/app';
 import { getSession } from "@/actions";
 import { redirect } from "next/navigation";
 import ResponsiveAppBar from "../components/navbar/navbar";
+import { SocketProvider } from "@/context/SocketContext";
 
 const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
@@ -27,8 +28,10 @@ export default async function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        {session.isLogin &&<ResponsiveAppBar/>}
-        {children}
+        <SocketProvider>
+          {session.isLogin &&<ResponsiveAppBar/>}
+          {children}
+        </SocketProvider>
       </body>
     </html>
   );

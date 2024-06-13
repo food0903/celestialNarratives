@@ -5,6 +5,8 @@ from flask_login import LoginManager, UserMixin, login_user, login_required, log
 from flask_cors import CORS
 from dotenv import load_dotenv
 import os
+from flask_socketio import SocketIO, send, emit
+from datetime import datetime
 
 # Load environment variables from .env file
 load_dotenv()
@@ -39,6 +41,8 @@ db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
+socketio = SocketIO(app, cors_allowed_origins="*")
+
 
 # Define the User model
 class User(db.Model):
@@ -47,6 +51,7 @@ class User(db.Model):
     username = db.Column(db.String(50), unique=True, nullable=True)
     password = db.Column(db.String(60), nullable=False)
     name = db.Column(db.String(50))
+    room_id = db.Column(db.Integer, db.ForeignKey('rooms.room_id'), nullable=True)
 
     def set_password(self, pw):
         self.password = bcrypt.generate_password_hash(pw).decode('utf8')
@@ -69,10 +74,27 @@ class User(db.Model):
 
     def get_id(self):
         return str(self.id)
+    
+
+class Room(db.Model):
+    __tablename__ = 'rooms'
+    room_id = db.Column(db.Integer, primary_key=True)
+    room_name = db.Column(db.String(255), nullable=False)
+    host_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    num_players = db.Column(db.Integer, nullable=False, default=0)
+    max_players = db.Column(db.Integer, nullable=False)
+    status = db.Column(db.String(50), nullable=False, default='waiting')
+    created_at = db.Column(db.DateTime, nullable=False, default=db.func.current_timestamp())
+
+    host = db.relationship('User', backref='hosted_rooms', foreign_keys=[host_id])
+    users = db.relationship('User', backref='room', foreign_keys=[User.room_id])
+
 
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
+
+
 
 @app.route('/')
 @login_required
@@ -102,22 +124,23 @@ def register():
             return jsonify({"error": "Username already exists"}), 409  
 
         hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
-        new_user = User(username=username, password=hashed_password, name=name)
+        new_user = User(username=username, password=hashed_password, name=name, room_id=None)
         db.session.add(new_user)
         db.session.commit()
-        
-        login_user(new_user)
 
+        login_user(new_user)
+        print(new_user.id, new_user.username, new_user.name)
+        
         response = jsonify({
             "message": "User registered and logged in successfully",
-            "user":{
+            "user": {  # This is the correct placement of the user object
                 "id": new_user.id,
                 "username": new_user.username,
                 "name": new_user.name
             }
         })
         response.headers.add('Access-Control-Allow-Credentials', 'true')
-        return jsonify({"message": "User registered and logged in successfully"}), 201
+        return response, 201
     else:
         return jsonify({"error": "Request body must be JSON"}), 400
 
@@ -153,5 +176,159 @@ def logout():
     response.headers.add('Access-Control-Allow-Credentials', 'true')
     return response, 200
 
+def emit_rooms_data():
+    rooms = Room.query.all()
+    rooms_list =[]
+    for room in rooms:
+        room_data = {
+            'room_id': room.room_id,
+            'room_name': room.room_name,
+            'host_id': room.host_id,
+            'num_players': room.num_players,
+            'max_players': room.max_players,
+            'status': room.status,
+            'created_at': room.created_at.strftime('%Y-%m-%d %H:%M:%S')
+        }
+        rooms_list.append(room_data)
+    socketio.emit('rooms_data', rooms_list, namespace='/')
+
+@app.route('/create_room', methods=['POST'])
+def create_room():
+    data = request.get_json()
+    room_name = data.get('room_name')
+    host_id = data.get('host_id')
+    max_players = data.get('max_players')
+
+    if not room_name or not max_players:
+        return jsonify({'message': 'Room name and max players are required'}), 400
+    
+    new_room = Room(room_name=room_name, host_id=host_id, max_players=max_players, num_players=1)
+    db.session.add(new_room)
+    db.session.commit()
+    user = User.query.get(host_id)
+    user.room_id = new_room.room_id
+    db.session.commit()
+
+    emit_rooms_data()
+
+    return jsonify({'message': 'Room created successfully',
+                    'room_res': {
+                        'room_id': new_room.room_id,
+                        'room_name': new_room.room_name,
+                        'host_id': new_room.host_id,
+                        'num_players': new_room.num_players,
+                        'max_players': new_room.max_players,
+                        'status': new_room.status,
+                        'created_at': new_room.created_at.strftime('%Y-%m-%d %H:%M:%S')
+                    }}), 201
+
+@app.route('/join_room', methods=['POST'])
+def join_room():
+    data = request.get_json()
+    user_id = data.get('user_id')
+    room_id = data.get('room_id')
+
+    try:
+        user = User.query.get(user_id)
+        if user.room_id:
+            return jsonify({'message': 'User already in a room',
+                            'error': 'user already in room'}), 400
+        user.room_id = room_id
+        room = Room.query.get(room_id)
+        if room.max_players == room.num_players:
+            return jsonify({'message': 'Room is full',
+                            'error': 'room is full'}), 400
+        room.num_players += 1
+        db.session.commit()
+        emit_rooms_data()
+        return jsonify({'message': 'Joined room successfully', 'room_id': room_id}), 200
+    except Exception as error:  # Corrected syntax from `catch` to `except`
+        return jsonify({'message': 'Error joining room', 'error': str(error)}), 400
+    
+@app.route('/leave_room', methods=['POST'])
+def leave_room():
+    data = request.get_json()
+    user_id = data.get('user_id')
+    room_id = data.get('room_id')
+
+    try:
+        user = User.query.get(user_id)
+        user.room_id = None
+        room = Room.query.get(room_id)
+        room.num_players -= 1
+        db.session.commit()
+        return jsonify({'message': 'Left room successfully', 'room_id': room_id}), 200
+    except Exception as error:
+        return jsonify({'message': 'Error leaving room', 'error': str(error)}), 400
+ 
+
+@socketio.on('get_rooms')
+def get_rooms():
+    rooms = Room.query.all()
+    rooms_list =[]
+    for room in rooms:
+        room_data = {
+            'room_id': room.room_id,
+            'room_name': room.room_name,
+            'host_id': room.host_id,
+            'num_players': room.num_players,
+            'max_players': room.max_players,
+            'status': room.status,
+            'created_at': room.created_at.strftime('%Y-%m-%d %H:%M:%S')
+        }
+        rooms_list.append(room_data)
+    emit('rooms_data', rooms_list, broadcast=True)
+
+@socketio.on('fetch_room_users')
+def fetch_room_users():
+    room_id = request.args.get('room_id')
+    users = User.query.filter_by(room_id=room_id).all()
+    users_list = []
+    for user in users:
+        user_data = {
+            'id': user.id,
+            'username': user.username,
+            'name': user.name
+        }
+        users_list.append(user_data)
+    emit('room_users', users_list, broadcast=True)
+
+@socketio.on('fetch_room')
+def fetch_room():
+    room_id = request.args.get('room_id')
+    room = Room.query.get(room_id)
+    if not room:
+        emit('room_data', {'error': 'Room not found'})
+        return
+    players = User.query.filter_by(room_id=room_id).all()
+    room_data = {
+        'room_id': room.room_id,
+        'room_name': room.room_name,
+        'host_id': room.host_id,
+        'num_players': room.num_players,
+        'max_players': room.max_players,
+        'status': room.status,
+        'created_at': room.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+        'players': [{'id': player.id, 'name': player.name} for player in players]
+    }
+    emit('room_data', room_data, broadcast=True)
+
+
+# SocketIO
+@socketio.on('connect')
+def handle_connect():
+    print('Client connected')
+    emit('message', 'Connected to the server')
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    print('Client disconnected')
+
+@socketio.on('message')
+def handle_message(msg):
+    print('Message:', msg)
+    send(msg, broadcast=True)
+
 if __name__ == '__main__':
-    app.run(debug=True)
+    socketio.run(app, debug=True)
+
